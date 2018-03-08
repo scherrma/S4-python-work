@@ -3,6 +3,7 @@ import numpy as np
 import scipy.interpolate as interp
 import lib.helpers as h
 import random
+import copy
 
 class ZCG:
     SPEED_OF_LIGHT = 299792458*10**6 #in um/s
@@ -15,18 +16,19 @@ class ZCG:
         self.fom, self.trans = None, None
 
     def __str__(self):
-        lbls = ('d', 'ff', 'tline', 'tslab', 'tstep')
-        vals = (self.d, self.ff, self.tline, self.tslab, self.tstep)
-        return ', '.join([l+' = '+str(round(v, 4)) for l, v in zip(lbls, vals)])
-        #return ('d = '+str(self.d)+', ff = '+str(self.ff)+', tslab = '+str(self.tslab)+
-        #       ', tline = '+str(self.tline)+', tstep = '+str(self.tstep))
+        lbls = ('d', 'ff', 'tline', 'tslab') #, 'tstep')
+        vals = (self.d, self.ff, self.tline, self.tslab) #, self.tstep)
+
+        strrep = ', '.join([l+' = '+str(round(v, 4)) for l, v in zip(lbls, vals)])  
+        strrep += ', fom: '+str(round(self.fom, 4)) if self.fom is not None else ''
+        return strrep
 
     def _calcfom(self):
-        self.fom = 100*(sum([t**2 for wl,t in self.trans])/len(self.trans))**(1/2)
+        self.fom = (sum([t**2 for wl,t in self.trans])/len(self.trans))**(-1/2)
 
     def evaluate(self):
         if self.fom is None:
-            S = S4.New(self.d, 30)
+            S = S4.New(self.d, 20)
         
             #materials
             S.AddMaterial("Vacuum",1)
@@ -56,4 +58,19 @@ class ZCG:
         return self.fom
 
     def mutate(self):
+        child = copy.deepcopy(self)
+        child.fom, child.trans = None, None
 
+        f = lambda x: 0.05*(x + 0.5*(1 if x>0 else -1)) #std dev and minimum shift
+        z = f(random.gauss(0, 1))
+
+        var = random.randint(0, 3)
+        if var == 0:
+            child.d *= 1+z
+        elif var == 1:
+            child.ff *= 1+z
+        elif var == 2:
+            child.tline *= 1+z
+        elif var == 3:
+            child.tslab *= 1+z 
+        return child
