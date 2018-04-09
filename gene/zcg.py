@@ -15,6 +15,8 @@ class ZCG:
     
     saph_n = interp.interp1d(*zip(*[[float(f)*(10**6),n] for f,n in h.opencsv('../matdat/al2o3_n.csv',1)]))
     saph_k = interp.interp1d(*zip(*[[float(f)*(10**6),n] for f,n in h.opencsv('../matdat/al2o3_k.csv',1)]))
+    
+    caf2_n = interp.interp1d(*zip(*[[float(f)*(10**6),n] for f,n in h.opencsv('../matdat/caf2_n.csv',1)]))
 
     def __init__(self, params, wavelengths):
         self.d, self.ff, self.tslab, self.tline, self.tstep = params
@@ -61,6 +63,7 @@ class ZCG:
             S.AddMaterial("Vacuum",1)
             S.AddMaterial("Silicon",1) #edited later per wavelength
             S.AddMaterial("Sapphire",2.5) #as above
+            S.AddMaterial("CaF2",1) #this one too
             S.AddMaterial("Germanium",16.2)
 
             #layers
@@ -69,7 +72,7 @@ class ZCG:
             S.AddLayer('lines',self.tline - self.tstep,"Vacuum")
             S.AddLayer('slab',self.tslab,"Silicon")
             #S.AddLayerCopy('bottom', 0, 'top')
-            S.AddLayer('bottom', 0, 'Sapphire')
+            S.AddLayer('bottom', 0, 'CaF2')
 
             #patterning
             S.SetRegionRectangle('step','Silicon',(-self.d*self.ff/4,0),0,(self.d*self.ff/4,0))
@@ -82,7 +85,7 @@ class ZCG:
             for wl in np.linspace(*self.wls):
                 S.SetFrequency(1/wl)
                 S.SetMaterial('Silicon',complex(ZCG.si_n(wl),ZCG.si_k(wl))**2)
-                #S.SetMaterial('Sapphire',complex(ZCG.saph_n(wl),ZCG.saph_k(wl))**2)
+                S.SetMaterial('CaF2',ZCG.caf2_n(wl)**2)
                 self.trans.append((wl, float(np.real(S.GetPowerFlux('bottom')[0]))))
             self._calcfom()
         
