@@ -1,28 +1,17 @@
-from math import exp
-import scipy.interpolate as interp
-import lib.helpers as h
-import random
 import copy
+from math import exp
+import random
 
 class Grating:
     edge_supp = 15 #peak near edge suppresion
 
-    SPEED_OF_LIGHT = 299792458*10**6 #in um/s
-    si_n = interp.interp1d(*zip(*[[((299792458*10**6)/float(f)),n] for f,n in h.opencsv('../matdat/silicon_n.csv',1)]))
-    si_k = interp.interp1d(*zip(*[[((299792458*10**6)/float(f)),n] for f,n in h.opencsv('../matdat/silicon_k.csv',1)]))
-    
-    saph_n = interp.interp1d(*zip(*[[float(f)*(10**6),n] for f,n in h.opencsv('../matdat/al2o3_n.csv',1)]))
-    saph_k = interp.interp1d(*zip(*[[float(f)*(10**6),n] for f,n in h.opencsv('../matdat/al2o3_k.csv',1)]))
-    
-    caf2_n = interp.interp1d(*zip(*[[float(f)*(10**6),n] for f,n in h.opencsv('../matdat/caf2_n.csv',1)]))
-
     def __init__(self, params, wavelengths):
-        self.params = params #list of pairs, form: [('name', value), ...]
+        self.params = list(params) #order needs to match labels
         self.wls = wavelengths
         self.fom, self.trans = None, None
 
     def __str__(self):
-        strrep = ', '.join([l+' = '+str(v) for l, v in params])  
+        strrep = ', '.join([l+' = '+str(round(v, 4)) for l, v in zip(self.labels, self.params)])  
         if self.fom:
             strrep += ', fom: '+str(round(self.fom, 4))
         return strrep
@@ -53,9 +42,12 @@ class Grating:
 
     def mutate(self):
         child = copy.deepcopy(self)
-        child.fom, child.trans = None, None
+        childparams = [round(random.gauss(1, 0.05)*p, 4) for p in self.params]
+        child.__init__(childparams, self.wls)
+        return child
 
-        for i in range(len(params)):
-            self.params[i][1] = round(random.gauss(1, 0.05)*self.params[i][1], 4)
-
+    def crossbreed(self, rhs):
+        child = copy.deepcopy(self)
+        childparams = [(self.params[i] if random.randint(0,1) else rhs.params[i]) for i in range(len(self.params))]
+        child.__init__(childparams, self.wls)
         return child
