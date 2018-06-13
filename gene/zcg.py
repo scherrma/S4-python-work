@@ -49,8 +49,8 @@ class ZCG:
             bg = [t for wl, t in self.trans[:leftloc]] + [t for wl, t in self.trans[rightloc:]]
             self.fom = invrms(bg)
             if self.fom > 25:
-                peakedge = 1 - exp(-edge_supp*(peak[0]-self.wls[0])/(self.wls[1]-self.wls[0])) \
-                             - exp(-edge_supp*(self.wls[1]-peak[0])/(self.wls[1]-self.wls[0]))
+                peakedge = 1 - exp(-ZCG.edge_supp*(peak[0]-self.wls[0])/(self.wls[1]-self.wls[0])) \
+                             - exp(-ZCG.edge_supp*(self.wls[1]-peak[0])/(self.wls[1]-self.wls[0]))
                 self.fom *= peakedge*(peak[1]**2)/(rightwl-leftwl)
         else:
             self.fom = invrms([t for wl, t in self.trans])
@@ -62,30 +62,25 @@ class ZCG:
             #materials
             S.AddMaterial("Vacuum",1)
             S.AddMaterial("Silicon",1) #edited later per wavelength
-            S.AddMaterial("Sapphire",2.5) #as above
-            S.AddMaterial("CaF2",1) #this one too
-            S.AddMaterial("Germanium",16.2)
 
             #layers
             S.AddLayer('top',0,"Vacuum")
             S.AddLayer('step',self.tstep,"Vacuum")
             S.AddLayer('lines',self.tline - self.tstep,"Vacuum")
-            S.AddLayer('slab',self.tslab,"Silicon")
-            #S.AddLayerCopy('bottom', 0, 'top')
-            S.AddLayer('bottom', 0, 'CaF2')
+            S.AddLayer('slab',self.tslab,"Vacuum")
+            S.AddLayer('bottom', 0, 'Silicon')
 
             #patterning
             S.SetRegionRectangle('step','Silicon',(-self.d*self.ff/4,0),0,(self.d*self.ff/4,0))
             S.SetRegionRectangle('lines','Silicon',(0,0),0,(self.d*self.ff/2,0))
 
             #light
-            S.SetExcitationPlanewave((0,0),0,1)
+            S.SetExcitationPlanewave((0,0),1,0)
 
             self.trans = []
             for wl in np.linspace(*self.wls):
                 S.SetFrequency(1/wl)
                 S.SetMaterial('Silicon',complex(ZCG.si_n(wl),ZCG.si_k(wl))**2)
-                S.SetMaterial('CaF2',ZCG.caf2_n(wl)**2)
                 self.trans.append((wl, float(np.real(S.GetPowerFlux('bottom')[0]))))
             self._calcfom()
         
@@ -95,10 +90,10 @@ class ZCG:
         child = copy.deepcopy(self)
         child.fom, child.trans = None, None
 
-        z = [random.gauss(1, 0.05) for i in range(5)]
-        child.d *= z[0]
-        child.ff *= z[1]
-        child.tline *= z[2]
-        child.tslab *= z[3]
-        child.tstep *= z[4] #max(child.tstep*z[4],0.3)
+        z = lambda x: round(x*random.gauss(1, 0.05), 4)
+        child.d = z(child.d)
+        child.ff = z(child.ff)
+        child.tline = z(child.tline)
+        child.tslab = z(child.tslab)
+        child.tstep = z(child.tstep)
         return child

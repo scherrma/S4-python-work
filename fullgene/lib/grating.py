@@ -34,15 +34,20 @@ class Grating:
             bg = [t for wl, t in self.trans[:leftloc]] + [t for wl, t in self.trans[rightloc:]]
             self.fom = invrms(bg)
             if self.fom > 25:
-                peakedge = 1 - exp(-ZCG.edge_supp*(peak[0]-self.wls[0])/(self.wls[1]-self.wls[0])) \
-                             - exp(-ZCG.edge_supp*(self.wls[1]-peak[0])/(self.wls[1]-self.wls[0]))
+                peakedge = 1 - exp(-Grating.edge_supp*(peak[0]-self.wls[0])/(self.wls[1]-self.wls[0])) \
+                             - exp(-Grating.edge_supp*(self.wls[1]-peak[0])/(self.wls[1]-self.wls[0]))
                 self.fom *= peakedge*(peak[1]**2)/(rightwl-leftwl)
         else:
             self.fom = invrms([t for wl, t in self.trans])
 
+        #debug
+        if self.fom < 0:
+            print("negative fom: "+str(self))
+            self.fom = 0
+
     def mutate(self):
         child = copy.deepcopy(self)
-        childparams = [round(random.gauss(1, 0.05)*p, 4) for p in self.params]
+        childparams = [round(random.gauss(1, 0.1)*p, 4) for p in self.params]
         child.__init__(childparams, self.wls)
         return child
 

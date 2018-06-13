@@ -1,14 +1,24 @@
 import S4
-import numpy as np
 from lib.grating import Grating
 
+import numpy as np
+import scipy.interpolate as interp
+import lib.helpers as h
+
 class HCG(Grating):
+    SPEED_OF_LIGHT = 299792458*10**6 #in um/s
+    si_n = interp.interp1d(*zip(*[[((299792458*10**6)/float(f)),n] for f,n in h.opencsv('../matdat/silicon_n.csv',1)]))
+    si_k = interp.interp1d(*zip(*[[((299792458*10**6)/float(f)),n] for f,n in h.opencsv('../matdat/silicon_k.csv',1)]))
+
     def __init__(self, params, wavelengths):
-        Grating.__init(self, params, wavelengths)
-        self.d, self.ff, self.tline, self.tair, self.tstep = list(zip(*self.params))[1]
+        Grating.__init__(self, params, wavelengths)
+        self.d, self.ff, self.tline, self.tair, self.tstep = params
+        self.labels = ['d','ff','tline','tair','tstep']
     
     def evaluate(self):
         if self.fom is None:
+            self.tstep = max(self.tstep, 0.3) #force minimum step size
+
             S = S4.New(self.d, 20)
         
             #materials
@@ -19,7 +29,7 @@ class HCG(Grating):
             S.AddLayer('top',0,"Vacuum")
             S.AddLayer('step',self.tstep,"Vacuum")
             S.AddLayer('lines',self.tline - self.tstep,"Vacuum")
-            S.AddLayer('slab',self.tair,"Vacuum")
+            S.AddLayer('gap',self.tair,"Vacuum")
             S.AddLayer('bottom', 0, "Silicon")
 
             #patterning
@@ -27,12 +37,12 @@ class HCG(Grating):
             S.SetRegionRectangle('lines','Silicon',(0,0),0,(self.d*self.ff/2,0))
 
             #light
-            S.SetExcitationPlanewave((0,0),1,0)
+            S.SetExcitationPlanewave((0,0),0,1)
 
             self.trans = []
             for wl in np.linspace(*self.wls):
                 S.SetFrequency(1/wl)
-                S.SetMaterial('Silicon',complex(ZCG.si_n(wl),ZCG.si_k(wl))**2)
+                S.SetMaterial('Silicon',complex(HCG.si_n(wl),HCG.si_k(wl))**2)
                 self.trans.append((wl, float(np.real(S.GetPowerFlux('bottom')[0]))))
             self._calcfom()
         

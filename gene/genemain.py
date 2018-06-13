@@ -3,7 +3,7 @@ import numpy as np
 import scipy.interpolate as interp
 import matplotlib.pyplot as plt
 import lib.helpers as h
-from zcg import ZCG
+from hcg import HCG
 
 def main():
     gensize = 50
@@ -11,13 +11,13 @@ def main():
     gencount = 100
 
     #dimensions
-    d = 1.85
-    ff = 0.575
-    tslab = 1
-    tline = 1
-    tstep= 0.1
+    d = 4.86
+    ff = 2/3
+    tline = 2.25
+    tair = 1.83
+    tstep = 0.085
 
-    g0 = ZCG((d, ff, tslab, tline, tstep),(3,5,2001))
+    g0 = HCG((d, ff, tline, tair, tstep),(8,12,3001))
     gen = [g0] + [g0.mutate() for i in range(gensize-1)]
 
     for i in range(gencount):

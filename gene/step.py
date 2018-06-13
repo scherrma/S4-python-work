@@ -10,11 +10,11 @@ def main():
 
     SPEED_OF_LIGHT = 299792458*10**6 #in um/s
     #dimensions
-    d = 4.6655
-    tline = 2.6959
-    tslab = 1.5478
-    ff= 0.6683
-    tstep= 0.2
+    d = 4.7075
+    tline = 2.8249
+    tair = 1.6692
+    ff= 0.6215
+    tstep= 0.0847
 
     si_n = interp.interp1d(*zip(*[[(SPEED_OF_LIGHT/float(f)),n] for f,n in h.opencsv('../matdat/silicon_n.csv',1)]))
     si_k = interp.interp1d(*zip(*[[(SPEED_OF_LIGHT/float(f)),n] for f,n in h.opencsv('../matdat/silicon_k.csv',1)]))
@@ -40,7 +40,7 @@ def main():
         S.AddLayer('top',0,"Vacuum")
         S.AddLayer('step',tstep,"Vacuum")
         S.AddLayer('lines',tline-tstep,"Vacuum")
-        S.AddLayer('slab',tslab,"Silicon")
+        S.AddLayer('slab',tair,"Vacuum")
         #S.AddLayer('bottom',0,'saph')
         S.AddLayerCopy('bottom',0,'top')
 
