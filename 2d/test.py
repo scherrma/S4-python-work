@@ -1,7 +1,7 @@
 from grid import Fourgrid
 from termcolor import colored
 
-a = Fourgrid(7)
+a = Fourgrid(15)
 print("a.size:",a.size,"\ta.hsize:",a.hsize)
 print(a)
 for i in range(2):
