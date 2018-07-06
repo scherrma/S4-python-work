@@ -6,44 +6,42 @@ class Fourgrid:
     def __init__(self, size):
         self.size = size
         self.hsize = (size-1)//2
-        self.odd = (size % 2 == 1)
-        self.data = [choice([True, False]) for i in range(size*size//4 + size%2)]
-
-    def __loc(self, coords):
-        x = coords[0] % self.size
-        y = coords[1] % self.size
-
-        if self.odd and x == self.hsize and y == self.hsize:
-            return len(self.data)-1
+        self.odd = size % 2
+        self.data = [choice([True, False]) for i in range(size*size//4 + self.odd)]
         
-        elif x > self.hsize or (x == self.hsize and y > self.hsize):
-            x = self.size - x - 1
-            y = self.size - y - 1
-        if y >= self.hsize:
-            y, x = x, self.size - y - 1
-        return x + y*(self.hsize + int(self.odd))
-
+        self._loc = [size*[0] for i in range(size)]
+        for x in range(self.hsize + 1):
+            for y in range(self.hsize + 1 - self.odd):
+                val = x + y*(self.hsize+1)
+                self._loc[x][y] = val
+                self._loc[size-x-1][size-y-1] = val
+                self._loc[y][size-x-1] = val
+                self._loc[size-y-1][x] = val
+        if self.odd:
+            self._loc[self.hsize][self.hsize] = self.hsize*(self.hsize+1)
+    
     def __getitem__(self, coords):
-        return self.data[self.__loc(coords)]
+        x, y = [i % self.size for i in coords]
+        return self.data[self._loc[x][y]]
 
     def __setitem__(self, coords, value):
-        self.data[self.__loc(coords)] = value
+        x, y = [i % self.size for i in coords]
+        self.data[self._loc[x][y]] = value
 
     def __str__(self):
-        lines = []
-        for y in range(self.size):
-            lines.append(''.join([colored(2*u"\u2588", "cyan" if self[x, y] else "yellow") for x in range(self.size)]))
-        #for y in range(self.size):
-        #    lines.append(' '.join([str(self.__loc((x,y))) for x in range(self.size)]))
-        return '\n'.join(lines)
-        self.data = newdata
-        
+        return '\n'.join([''.join([colored(2*u"\u2588", "cyan" if self[x, y] else "yellow")\
+                for x in range(self.size)]) for y in range(self.size)]) 
+
+    def bigstr(self):
+        return '\n'.join([''.join([colored(2*u"\u2588", "cyan" if self[x, y] else "yellow")\
+                for x in range(2*self.size)]) for y in range(2*self.size)]) 
+
     def cool(self):
         newdata = deepcopy(self.data)
         for x in range(self.hsize):
             for y in range(self.hsize):
                 nbors = sum([int(self[x+i, y+j]) for i in (-1, 0, 1) for j in (-1, 0, 1)])
-                newdata[self.__loc((x, y))] = (nbors > 4)
+                newdata[self._loc[x][y]] = (nbors > 4)
         self.data = newdata
 
     def altcool(self):
