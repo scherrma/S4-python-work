@@ -1,5 +1,6 @@
 from hcg import HCG
 from zcg import ZCG
+from blockzcg import BlockZCG
 from lib.generation import Generation
 from lib.helpers import writecsv
 
@@ -8,12 +9,12 @@ def main():
 
     #dimensions
     d = 4
-    ff = 2/3
-    tline = 2
+    ff = 1/2
+    tblock = 2
     tslab = 2
-    tstep = 0.1
+    #tstep = 0.1
 
-    g0 = HCG((d, ff, tline, tslab, tstep),(8,12,2001))
+    g0 = BlockZCG((d, ff, tblock, tslab),(8,12,1001))
     g0.evaluate()
     genbest = list(zip(*g0.trans))
     gen = Generation(50, g0, elite = 3)
