@@ -45,7 +45,7 @@ class BiZCG(Grating):
 
             #patterning
             S.SetRegionRectangle('line1','Silicon',(-3*self.d*self.ff/8,0),0,(self.d*self.ff/8,0))
-            S.SetRegionRectangle('line2','Silicon',(self.d*self.ff/8,0),0,(self.d*self.ff/8,0))
+            S.SetRegionRectangle('line2','Silicon',(-3*self.d*self.ff/8,0),0,(self.d*self.ff/8,0))
             S.SetRegionRectangle('line2','Silicon',(self.d*self.ff/8,0),0,(self.d*self.ff/8,0))
 
 
@@ -65,6 +65,6 @@ class BiZCG(Grating):
                 peaks.append(self.peak)
             self.fom = min(foms)
             if self.fom > 20:
-                self.fom *= exp(-(max(peaks) - min(peaks))/0.05)
+                self.fom *= exp(-(max(peaks) - min(peaks))/0.1)
 
         return self.fom

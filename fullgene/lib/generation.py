@@ -9,6 +9,7 @@ class Generation:
         else:
             self.pop = size*[seed]
 
+        self.best = None
         self.elite = elite
         self.muta_rate = mutation_rate
 
@@ -17,10 +18,7 @@ class Generation:
 
     def _evaluate(self):
         self.pop.sort(key = lambda x: x.evaluate(), reverse=True)
-
-    def best(self, n = 1):
-        self._evaluate()
-        return self.pop[:n]
+        self.best = self.pop[0]
 
     def progeny(self):
         self._evaluate()

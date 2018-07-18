@@ -1,5 +1,5 @@
 import copy
-from math import exp
+from math import exp, isclose
 import random
 
 class Grating:
@@ -8,7 +8,7 @@ class Grating:
     def __init__(self, params, wavelengths):
         self.params = list(params) #order needs to match labels
         self.wls = wavelengths
-        self.fom, self.trans = None, None
+        self.labels, self.fom, self.trans = None, None, None
 
     def __str__(self):
         strrep = ', '.join([l+' = '+str(round(v, 4)) for l, v in zip(self.labels, self.params)])  
@@ -16,10 +16,21 @@ class Grating:
             strrep += ', fom: '+str(round(self.fom, 4))
         return strrep
 
+    def __eq__(self, rhs):
+        if self.__class__ != rhs.__class__:
+            return False
+        if self.wls != rhs.wls:
+            return False
+        for lhsval, rhsval in zip(self.params, rhs.params):
+            if not isclose(lhsval, rhsval):
+                return False
+        return True
+
     def _calcfom(self):
         invrms = lambda x: (sum([a**2 for a in x])/len(x))**(-1/2)
 
         peak = max(self.trans, key=lambda x:x[1])
+        self.peak = peak[0]
         leftloc = rightloc = peakloc = self.trans.index(peak)
         while self.trans[leftloc][1] > peak[1]/2 and leftloc > 0:
             leftloc -= 1
@@ -33,7 +44,7 @@ class Grating:
         if leftloc > 0 and rightloc < len(self.trans):
             bg = [t for wl, t in self.trans[:leftloc]] + [t for wl, t in self.trans[rightloc:]]
             self.fom = invrms(bg)
-            if self.fom > 25:
+            if self.fom > 20:
                 peakedge = 1 - exp(-Grating.edge_supp*(peak[0]-self.wls[0])/(self.wls[1]-self.wls[0])) \
                              - exp(-Grating.edge_supp*(self.wls[1]-peak[0])/(self.wls[1]-self.wls[0]))
                 self.fom *= peakedge*(peak[1]**2)/(rightwl-leftwl)
