@@ -12,7 +12,6 @@ def main():
     tslab = 1.82
 
     g = ZCG2D((d, tblocks, tslab), Polygon([(1/2, 0), (1, 0), (1, 1), (0, 1), (0, 1/2), (1/2, 1/2)]), (8,12,1001))
-    print(g)
     g.evaluate()
     print(g)
 

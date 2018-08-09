@@ -27,14 +27,11 @@ class ZCG2D(Grating2D):
             S.AddLayer('bottom', 0, "Vacuum")
           
             #patterning
-            print("\npatterning")
             for shape in self.allpolys:
                 coords = shape.exterior.coords[:-1] if shape.exterior.is_ccw else shape.exterior.coords[:0:-1]
-                print("exterior coords:",coords)
                 S.SetRegionPolygon('blocks', 'Silicon', (0, 0), 0, tuple(coords))
                 for inner in shape.interiors:
                     coords = inner.coords[:-1] if inner.is_ccw else inner.coords[:0:-1]
-                    print("\tinterior coords:",coords)
                     S.SetRegionPolygon('blocks', 'Vacuum', (0, 0), 0, tuple(coords))
           
             #light
@@ -44,10 +41,7 @@ class ZCG2D(Grating2D):
             for wl in np.linspace(*self.wls):
                 S.SetFrequency(1/wl)
                 S.SetMaterial('Silicon',complex(ZCG2D.si_n(wl), ZCG2D.si_k(wl))**2)
-                print("wl:",wl)
-                pflux = S.GetPowerFlux('bottom')
-                print(pflux)
                 self.trans.append((wl, float(np.real(S.GetPowerFlux('bottom')[0]))))
-                self._calcfom()
+            self._calcfom()
         
         return self.fom                                                                 
