@@ -58,6 +58,7 @@ def main():
             #S.SetMaterial('saph',complex(saph_n(wl),saph_k(wl))**2)
             S.SetMaterial('Silicon',complex(si_n(wl),si_k(wl))**2)
             trans.append(float(np.real(S.GetPowerFlux('bottom')[0]))) 
+            #print("wl:",wl,"\ttrans:",trans[-1])
         plt.plot(wavelengths,trans, label=vartext+' = '+str(var))
 
     plt.legend()
