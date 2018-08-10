@@ -70,15 +70,22 @@ class Grating2D:
         if self.fom < 0:
             print("negative fom: "+str(self))
             self.fom = 0
-
+    
    ## def mutate(self):
    ##     child = copy.deepcopy(self)
-   ##     childparams = [round(random.gauss(1, 0.1)*p, 4) for p in self.params]
-   ##     child.__init__(childparams, self.wls)
-   ##     return child
+   ##     if random.random() < 1/2:
+   ##         childpoly = self.poly
+   ##         childparams = [round(random.gauss(1, 0.1)*p, 4) for p in self.params]
+   ##     else:
+   ##         childparams = self.params
 
-   ## def crossbreed(self, rhs):
-   ##     child = copy.deepcopy(self)
-   ##     childparams = [(self.params[i] if random.randint(0,1) else rhs.params[i]) for i in range(len(self.params))]
+
    ##     child.__init__(childparams, self.wls)
    ##     return child
+    
+    def crossbreed(self, rhs):
+        child = copy.deepcopy(self)
+        childparams = [(self.params[i] if random.randint(0,1) else rhs.params[i]) for i in range(len(self.params))]
+        childpoly = (self.poly.union(rhs.poly) if random.random() < 1/2 else self.poly.intersection(rhs.poly))
+        child.__init__(childparams, childpoly, self.wls)
+        return child
