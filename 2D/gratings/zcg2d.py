@@ -12,7 +12,7 @@ class ZCG2D(Grating2D):
     si_n = interp.interp1d(*zip(*[[((consts.speed_of_light*10**6)/float(f)),n] for f,n in h.opencsv('matdat/silicon_n.csv',1)]))
     si_k = interp.interp1d(*zip(*[[((consts.speed_of_light*10**6)/float(f)),n] for f,n in h.opencsv('matdat/silicon_k.csv',1)]))
 
-    def evaluate(self, fbasis = 10):
+    def evaluate(self, fbasis = 30):
         if self.fom is None:
             S = S4.New(Lattice = ((self.d, 0), (0, self.d)), NumBasis = fbasis)
           

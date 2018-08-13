@@ -4,6 +4,7 @@ import random
 from shapely.geometry import Polygon, MultiPolygon
 from shapely.affinity import scale
 from shapely.ops import unary_union
+from lib.vector import Vector
 
 class Grating2D:
     edge_supp = 15 #peak near edge suppresion
@@ -17,7 +18,11 @@ class Grating2D:
         self.fom, self.trans = None, None
     
     def _findpolys(self):
-        allpolys = [self.poly, Polygon([(-y, x) for (x, y) in self.poly.exterior.coords])]
+        try:
+            allpolys = [self.poly, Polygon([(-y, x) for (x, y) in self.poly.exterior.coords])]
+        except:
+            print(self.poly)
+            raise SystemError
         allpolys += [Polygon([(-x, -y) for (x, y) in k.exterior.coords]) for k in allpolys]
         allpolys = scale(unary_union(allpolys), self.d/2, self.d/2)
         try:
@@ -71,17 +76,43 @@ class Grating2D:
             print("negative fom: "+str(self))
             self.fom = 0
     
-   ## def mutate(self):
-   ##     child = copy.deepcopy(self)
-   ##     if random.random() < 1/2:
-   ##         childpoly = self.poly
-   ##         childparams = [round(random.gauss(1, 0.1)*p, 4) for p in self.params]
-   ##     else:
-   ##         childparams = self.params
+    def mutate(self):
+        childparams, childpoly = self.params, self.poly
+        if random.random() < 1/2:
+            childparams = [round(random.gauss(1, 0.1)*p, 4) for p in self.params]
 
+        else:
+            if len(self.poly.exterior.coords) < 5 or (len(self.poly.exterior.coords) < 15 and random.random() < 1/2): #add a point
+                #find the edge of the polygon nearest the new point and add the point there
+                mindist = float('inf')
+                pt_new = Vector([round(random.uniform(-1/3, 1),3) for i in range(2)])
+                for i in range(-1, len(self.poly.exterior.coords)-2):
+                    pt_left, pt_center, pt_right = [Vector(self.poly.exterior.coords[1:][i+k]) for k in (-1, 0, 1)]
+                    v_left, v_right, v_new = [pt - pt_center for pt in (pt_left, pt_right, pt_new)]
+                    if v_new.dot(v_right) > 0 and (pt_new - pt_right).dot(pt_center - pt_right) > 0:
+                        dist = v_new.reject(v_right).norm()
+                        edge = i + 1
+                    else:
+                        dist = v_new.norm()
+                        edge = i + bool(v_new.reject(v_left.unit() + v_right.unit()).dot(v_right) > 0)
+                    if dist < mindist:
+                        mindist = dist
+                        nearedge = edge
+                childpoly = Polygon(self.poly.exterior.coords[:nearedge+1] + [pt_new.val] + self.poly.exterior.coords[nearedge+1:-1])
 
-   ##     child.__init__(childparams, self.wls)
-   ##     return child
+            else: #remove a point
+                pt = random.randint(0, len(self.poly.exterior.coords)-2)
+                childpoly = Polygon(self.poly.exterior.coords[:pt]+self.poly.exterior.coords[pt+1:-1])
+                while not (childpoly.is_valid and childpoly.is_simple):
+                    pt = random.randint(0, len(self.poly.exterior.coords)-2)
+                    childpoly = Polygon(self.poly.exterior.coords[:pt]+self.poly.exterior.coords[pt+1:-1])
+
+        child = self.__class__(childparams, childpoly, self.wls)
+        try:
+            a = child.poly.exterior
+        except:
+            print("starting shape:",list(self.poly.exterior.coords),"\tnew shape:",child.poly)
+        return child
     
     def crossbreed(self, rhs):
         child = copy.deepcopy(self)

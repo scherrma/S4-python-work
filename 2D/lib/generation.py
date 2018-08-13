@@ -3,9 +3,14 @@ import numpy
 import random 
 
 class Generation:
-    def __init__(self, size, seed = None, mutation_rate = 0.1, elite = 0):
+    def __init__(self, size, seed = None, mutation_rate = 0.1, elite = 1):
         if(seed):
-            self.pop = [seed] + [seed.mutate() for i in range(size-1)]
+            self.pop = [seed]
+            for i in range(size-1):
+                newg = seed
+                for j in range(5):
+                    newg = newg.mutate()
+                self.pop.append(newg)
         else:
             self.pop = size*[seed]
 
