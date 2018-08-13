@@ -20,11 +20,18 @@ class Grating2D:
     def _findpolys(self):
         try:
             allpolys = [self.poly, Polygon([(-y, x) for (x, y) in self.poly.exterior.coords])]
+            allpolys += [Polygon([(-x, -y) for (x, y) in k.exterior.coords]) for k in allpolys]
+            allpolys = scale(unary_union(allpolys), self.d/2, self.d/2)
         except:
-            print(self.poly)
-            raise SystemError
-        allpolys += [Polygon([(-x, -y) for (x, y) in k.exterior.coords]) for k in allpolys]
-        allpolys = scale(unary_union(allpolys), self.d/2, self.d/2)
+            self.poly.buffer(0, cap_style=2, join_style=2)
+            print("buffered")
+        try:
+            allpolys = [self.poly, Polygon([(-y, x) for (x, y) in self.poly.exterior.coords])]
+            allpolys += [Polygon([(-x, -y) for (x, y) in k.exterior.coords]) for k in allpolys]
+            allpolys = scale(unary_union(allpolys), self.d/2, self.d/2)
+        except:
+            print("self.poly")
+            raise SystemExit
         try:
             iter(allpolys)
         except TypeError:
@@ -36,7 +43,7 @@ class Grating2D:
         if self.fom:
             strrep += ', fom: '+str(round(self.fom, 4))
         for shape in self.allpolys:
-            strrep += "\n\texterior polygon: "+str(list(shape.exterior.coords))
+            strrep += "\n\texterior polygon: "+str(list(map(lambda x: (round(x[0], 3), round(x[1], 3)), shape.exterior.coords)))
             if shape.interiors:
                 strrep += "\n\tinterior polygon"+("s" if len(shape.interiors) > 1 else "")+": "\
                         + '\n\t'.join([str(list(inner.coords)) for inner in shape.interiors])
@@ -65,8 +72,8 @@ class Grating2D:
             bg = [t for wl, t in self.trans[:leftloc]] + [t for wl, t in self.trans[rightloc:]]
             self.fom = invrms(bg)
             if self.fom > 20:
-                peakedge = 1 - exp(-Grating.edge_supp*(peak[0]-self.wls[0])/(self.wls[1]-self.wls[0])) \
-                             - exp(-Grating.edge_supp*(self.wls[1]-peak[0])/(self.wls[1]-self.wls[0]))
+                peakedge = 1 - exp(-Grating2D.edge_supp*(peak[0]-self.wls[0])/(self.wls[1]-self.wls[0])) \
+                             - exp(-Grating2D.edge_supp*(self.wls[1]-peak[0])/(self.wls[1]-self.wls[0]))
                 self.fom *= peakedge*(peak[1]**2)/(rightwl-leftwl)
         else:
             self.fom = invrms([t for wl, t in self.trans])
@@ -89,15 +96,20 @@ class Grating2D:
                 for i in range(-1, len(self.poly.exterior.coords)-2):
                     pt_left, pt_center, pt_right = [Vector(self.poly.exterior.coords[1:][i+k]) for k in (-1, 0, 1)]
                     v_left, v_right, v_new = [pt - pt_center for pt in (pt_left, pt_right, pt_new)]
-                    if v_new.dot(v_right) > 0 and (pt_new - pt_right).dot(pt_center - pt_right) > 0:
-                        dist = v_new.reject(v_right).norm()
-                        edge = i + 1
-                    else:
-                        dist = v_new.norm()
-                        edge = i + bool(v_new.reject(v_left.unit() + v_right.unit()).dot(v_right) > 0)
-                    if dist < mindist:
-                        mindist = dist
-                        nearedge = edge
+                    if (v_left.unit() + v_right.unit()).norm() > 10**(-4): #if the vectors are pointed nearly precisely opposite each other, ignore them
+                       if v_new.dot(v_right) > 0 and (pt_new - pt_right).dot(pt_center - pt_right) > 0:
+                           dist = v_new.reject(v_right).norm()
+                           edge = i + 1
+                       else:
+                           dist = v_new.norm()
+                           try:
+                               edge = i + bool(v_new.reject(v_left.unit() + v_right.unit()).dot(v_right) > 0)
+                           except ZeroDivisionError:
+                               print("\n\n",colored("zero division error",'red'), "while adding", pt_new, "to", list(self.poly.exterior.coords), "\nconsidering pt_left, pt_center, pt_right:", pt_left, pt_center, pt_right)
+                               raise SystemExit
+                       if dist < mindist:
+                           mindist = dist
+                           nearedge = edge
                 childpoly = Polygon(self.poly.exterior.coords[:nearedge+1] + [pt_new.val] + self.poly.exterior.coords[nearedge+1:-1])
 
             else: #remove a point
@@ -109,14 +121,20 @@ class Grating2D:
 
         child = self.__class__(childparams, childpoly, self.wls)
         try:
-            a = child.poly.exterior
+            allpolys = [child.poly, Polygon([(-y, x) for (x, y) in child.poly.exterior.coords])]
+            allpolys += [Polygon([(-x, -y) for (x, y) in k.exterior.coords]) for k in allpolys]
+            allpolys = scale(unary_union(allpolys), self.d/2, self.d/2)
         except:
-            print("starting shape:",list(self.poly.exterior.coords),"\tnew shape:",child.poly)
+            print("this should systemexit; starting shape:",list(self.poly.exterior.coords),"\tnew shape:",child.poly)
+            raise SystemExit
         return child
     
     def crossbreed(self, rhs):
-        child = copy.deepcopy(self)
-        childparams = [(self.params[i] if random.randint(0,1) else rhs.params[i]) for i in range(len(self.params))]
-        childpoly = (self.poly.union(rhs.poly) if random.random() < 1/2 else self.poly.intersection(rhs.poly))
-        child.__init__(childparams, childpoly, self.wls)
+        childparams = [p[random.randint(0, 1)] for p in zip(self.params, rhs.params)]
+
+        childpoly = self.poly.intersection(rhs.poly)
+        if not childpoly.is_valid or random.random() < 1/2:
+            childpoly = self.poly.union(rhs.poly)
+
+        child = self.__class__(childparams, childpoly, self.wls)
         return child
