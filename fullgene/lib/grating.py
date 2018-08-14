@@ -3,17 +3,20 @@ from math import exp, isclose
 import random
 
 class Grating:
-    edge_supp = 15 #peak near edge suppresion
 
-    def __init__(self, params, wavelengths):
+    def __init__(self, params, wavelengths, target = None):
         self.params = list(params) #order needs to match labels
         self.wls = wavelengths
+        self.target = target
         self.labels, self.fom, self.trans = None, None, None
+        self.edge_supp = 15 #peak near edge suppresion
 
     def __str__(self):
         strrep = ', '.join([l+' = '+str(round(v, 4)) for l, v in zip(self.labels, self.params)])  
+        if self.peak:
+            strrep += ', peak: ' + str(round(100*self.peak[1], 1)) + "% at " + str(round(self.peak[0])) 
         if self.fom:
-            strrep += ', fom: '+str(round(self.fom, 4))
+            strrep += ', fom: ' + str(round(self.fom, 4))
         return strrep
 
     def __eq__(self, rhs):
@@ -27,10 +30,11 @@ class Grating:
         return True
 
     def _calcfom(self):
+        self.peak = None
         invrms = lambda x: (sum([a**2 for a in x])/len(x))**(-1/2)
 
         peak = max(self.trans, key=lambda x:x[1])
-        self.peak = peak[0]
+        self.peak = peak
         leftloc = rightloc = peakloc = self.trans.index(peak)
         while self.trans[leftloc][1] > peak[1]/2 and leftloc > 0:
             leftloc -= 1
@@ -40,30 +44,36 @@ class Grating:
             rightloc += 1
         rightwl = self.trans[rightloc][0] + (self.trans[rightloc][0]-self.trans[rightloc-1][0])\
                 *(self.trans[rightloc][1]-peak[1]/2)/(self.trans[rightloc][1]-self.trans[rightloc-1][1])
-
-        if leftloc > 0 and rightloc < len(self.trans):
+        
+        if leftloc > 0 and rightloc < len(self.trans) and (rightwl - leftwl)/(self.wls[1] - self.wls[0]) < 1/3:
             bg = [t for wl, t in self.trans[:leftloc]] + [t for wl, t in self.trans[rightloc:]]
             self.fom = invrms(bg)
             if self.fom > 20:
-                peakedge = 1 - exp(-Grating.edge_supp*(peak[0]-self.wls[0])/(self.wls[1]-self.wls[0])) \
-                             - exp(-Grating.edge_supp*(self.wls[1]-peak[0])/(self.wls[1]-self.wls[0]))
-                self.fom *= peakedge*(peak[1]**2)/(rightwl-leftwl)
+                self.peak = peak
+                if self.target:
+                    peakedge = exp(-self.edge_supp*abs(peak[0]-self.target)/(self.wls[1]-self.wls[0]))
+                else:
+                    peakedge = 1 - exp(-self.edge_supp*(peak[0]-self.wls[0])/(self.wls[1]-self.wls[0])) \
+                            - exp(-self.edge_supp*(self.wls[1]-peak[0])/(self.wls[1]-self.wls[0]))
+                self.fom *= peakedge*(peak[1]**2)*(self.wls[1] - self.wls[0])/(rightwl-leftwl)
         else:
             self.fom = invrms([t for wl, t in self.trans])
 
         #debug
         if self.fom < 0:
+            print("target:", self.target)
             print("negative fom: "+str(self))
+            print("peakedge: " + str(round(peakedge, 3)))
             self.fom = 0
 
     def mutate(self):
         child = copy.deepcopy(self)
         childparams = [round(random.gauss(1, 0.1)*p, 4) for p in self.params]
-        child.__init__(childparams, self.wls)
+        child.__init__(childparams, self.wls, self.target)
         return child
 
     def crossbreed(self, rhs):
         child = copy.deepcopy(self)
         childparams = [(self.params[i] if random.randint(0,1) else rhs.params[i]) for i in range(len(self.params))]
-        child.__init__(childparams, self.wls)
+        child.__init__(childparams, self.wls, self.target)
         return child

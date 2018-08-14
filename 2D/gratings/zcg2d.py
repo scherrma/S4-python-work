@@ -39,6 +39,7 @@ class ZCG2D(Grating2D):
           
             self.trans = []
             for wl in np.linspace(*self.wls):
+                print("Solving for wavelength", wl, end='\r')
                 S.SetFrequency(1/wl)
                 S.SetMaterial('Silicon',complex(ZCG2D.si_n(wl), ZCG2D.si_k(wl))**2)
                 self.trans.append((wl, float(np.real(S.GetPowerFlux('bottom')[0]))))

@@ -16,7 +16,13 @@ class Generation:
     def __str__(self):
         return '\n'.join([str(g) for g in self.pop])
 
-    def _evaluate(self):
+    def _evaluate(self, progress = False):
+        for i in range(len(self.pop)):
+            self.pop[i].evaluate()
+            if progress:
+                print("Progress: {0}/{1}".format(i+1, len(self.pop)), end='\r')
+        if progress:
+            print(25*" ", end='\r')
         self.pop.sort(key = lambda x: x.evaluate(), reverse=True)
         self.best = self.pop[0]
 

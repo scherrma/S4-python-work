@@ -68,7 +68,8 @@ class Grating2D:
         rightwl = self.trans[rightloc][0] + (self.trans[rightloc][0]-self.trans[rightloc-1][0])\
                 *(self.trans[rightloc][1]-peak[1]/2)/(self.trans[rightloc][1]-self.trans[rightloc-1][1])
 
-        if leftloc > 0 and rightloc < len(self.trans):
+        if leftloc > 0 and rightloc < len(self.trans) and (rightwl - leftwl)/(self.wls[1] - self.wls[0]) < 0.1:
+            print("leftwl:",leftwl,"\trightwl:",rightwl,"\twindow:",self.wls[1]-self.wls[0])
             bg = [t for wl, t in self.trans[:leftloc]] + [t for wl, t in self.trans[rightloc:]]
             self.fom = invrms(bg)
             if self.fom > 20:
