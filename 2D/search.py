@@ -13,10 +13,11 @@ def main():
     gencount = 100
 
     #dimensions
-    d = 4.65
-    tblocks = 2
-    tslab = 1.2
-    seedpoly = Polygon([(0, 0), (0, 0.866), (0.433, 0.75), (0.835, 0.539), (0.75, 0.158), (0.866, 0)])
+    d = 4.5
+    tblocks = 2.23
+    tslab = 1.17
+    #seedpoly = Polygon([(0, 0), (0, 3/4), (3/4, 3/4), (3/4, 0)])
+    seedpoly = Polygon([(0, 0), (0, 0.7515), (0.7515, 0.7515), (0.792, 0.36), (0.9675, 0.126), (0.7515, 0.108), (0.7515, 0.0405), (0.648, 0)])
     g0 = ZCG2D((d, tblocks, tslab), seedpoly, (8,12,201))
     g0.evaluate()
     oldbest = g0

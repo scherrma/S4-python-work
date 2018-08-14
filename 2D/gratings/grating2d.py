@@ -122,8 +122,11 @@ class Grating2D:
         childparams = [p[random.randint(0, 1)] for p in zip(self.params, rhs.params)]
 
         childpoly = self.poly.intersection(rhs.poly)
-        if not childpoly.is_valid or childpoly.is_simple or random.random() < 1/2:
+        if not (childpoly.is_valid and childpoly.is_simple and random.random() < 1/2):
             childpoly = self.poly.union(rhs.poly)
-
+        if childpoly.__class__ != self.poly.__class__:
+            print("childpoly is a", childpoly.__class__)
+            print(childpoly, "\ncreated from\n", self.poly)
+            childpoly = self.poly
         child = self.__class__(childparams, childpoly, self.wls)
         return child
