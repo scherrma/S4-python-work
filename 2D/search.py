@@ -1,3 +1,7 @@
+import warnings
+warnings.filterwarnings("ignore", message="numpy.dtype size changed")
+warnings.filterwarnings("ignore", message="numpy.ufunc size changed")
+
 from datetime import datetime as dt
 from gratings.zcg2d import ZCG2D
 from lib.generation import Generation
@@ -16,14 +20,16 @@ def main():
     g0 = ZCG2D((d, tblocks, tslab), seedpoly, (8,12,201))
     g0.evaluate()
     oldbest = g0
-    print(str(dt.time(dt.now())).split('.')[0],colored("seed:", 'cyan'),g0)
     genbest = list(zip(*g0.trans))
-    gen = Generation(25, g0)
+    print(str(dt.time(dt.now())).split('.')[0],colored("seed:", 'cyan'),g0)
 
+    gen = Generation(25, g0)
     for i in range(gencount):
         gen = gen.progeny()
         genbest.append([t for wl,t in gen.best.trans])
-        print(str(dt.time(dt.now())).split('.')[0],colored("gen "+str(i), 'cyan'),"best grating: "+str(gen.best))
+        print(str(dt.time(dt.now())).split('.')[0],colored("gen "+str(i), 'cyan'),\
+                colored("new best grating\n", 'green')+str(gen.best) if gen.best.fom > oldbest.fom + 0.001 else "")
+        oldbest = gen.best
 
     writecsv("iter_best.csv",list(zip(*genbest)),tuple(["wl",0]+list(range(1,gencount+1))))
 

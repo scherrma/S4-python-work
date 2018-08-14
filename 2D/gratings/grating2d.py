@@ -30,7 +30,7 @@ class Grating2D:
             allpolys += [Polygon([(-x, -y) for (x, y) in k.exterior.coords]) for k in allpolys]
             allpolys = scale(unary_union(allpolys), self.d/2, self.d/2)
         except:
-            print("self.poly")
+            print("self.poly:", self.poly)
             raise SystemExit
         try:
             iter(allpolys)
@@ -102,15 +102,12 @@ class Grating2D:
                            edge = i + 1
                        else:
                            dist = v_new.norm()
-                           try:
-                               edge = i + bool(v_new.reject(v_left.unit() + v_right.unit()).dot(v_right) > 0)
-                           except ZeroDivisionError:
-                               print("\n\n",colored("zero division error",'red'), "while adding", pt_new, "to", list(self.poly.exterior.coords), "\nconsidering pt_left, pt_center, pt_right:", pt_left, pt_center, pt_right)
-                               raise SystemExit
+                           edge = i + bool(v_new.reject(v_left.unit() + v_right.unit()).dot(v_right) > 0)
                        if dist < mindist:
                            mindist = dist
                            nearedge = edge
                 childpoly = Polygon(self.poly.exterior.coords[:nearedge+1] + [pt_new.val] + self.poly.exterior.coords[nearedge+1:-1])
+
 
             else: #remove a point
                 pt = random.randint(0, len(self.poly.exterior.coords)-2)
@@ -119,21 +116,13 @@ class Grating2D:
                     pt = random.randint(0, len(self.poly.exterior.coords)-2)
                     childpoly = Polygon(self.poly.exterior.coords[:pt]+self.poly.exterior.coords[pt+1:-1])
 
-        child = self.__class__(childparams, childpoly, self.wls)
-        try:
-            allpolys = [child.poly, Polygon([(-y, x) for (x, y) in child.poly.exterior.coords])]
-            allpolys += [Polygon([(-x, -y) for (x, y) in k.exterior.coords]) for k in allpolys]
-            allpolys = scale(unary_union(allpolys), self.d/2, self.d/2)
-        except:
-            print("this should systemexit; starting shape:",list(self.poly.exterior.coords),"\tnew shape:",child.poly)
-            raise SystemExit
-        return child
+        return self.__class__(childparams, childpoly, self.wls)
     
     def crossbreed(self, rhs):
         childparams = [p[random.randint(0, 1)] for p in zip(self.params, rhs.params)]
 
         childpoly = self.poly.intersection(rhs.poly)
-        if not childpoly.is_valid or random.random() < 1/2:
+        if not childpoly.is_valid or childpoly.is_simple or random.random() < 1/2:
             childpoly = self.poly.union(rhs.poly)
 
         child = self.__class__(childparams, childpoly, self.wls)
