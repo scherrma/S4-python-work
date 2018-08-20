@@ -8,7 +8,7 @@ from gratings.zcg import ZCG
 from gratings.nirzcg import NIRZCG
 from gratings.bizcg import BiZCG
 from gratings.blockzcg import BlockZCG
-from generation import Generation
+from lib.generation import Generation
 from lib.helpers import writecsv
 
 from termcolor import colored
@@ -32,8 +32,8 @@ def main():
 
     gen = Generation(25, g0)
     for i in range(gencount): 
-        #str(dt.time(dt.now())).split('.')[0],colored("gen "+str(i), 'cyan')
-        gen._evaluate(progress_txt = (str(dt.time(dt.now())).split('.')[0]+colored(" gen "+str(i), 'cyan')))
+        print(str(dt.time(dt.now())).split('.')[0],colored("gen "+str(i), 'cyan'))
+        gen._evaluate(progress = True)
         gen = gen.progeny()
         genbest.append([t for wl,t in gen.best.trans])
         if gen.best.fom > oldbest.fom:

@@ -5,29 +5,27 @@ import random
 class Grating:
 
     def __init__(self, params, wavelengths, target = None):
-        self.params = list(params) #order needs to match labels
-        self.wls = wavelengths
-        self.target = target
-        self.labels, self.fom, self.trans = None, None, None
+        self.params, self.wls = list(params), wavelengths
+        self.labels, self.fom, self.trans, self.peak = 4*(None,)
+        if target is not None:
+            self.target = target
+        else:
+            self.target = ((self.wls[0] + self.wls[1]) / 2, 0.01 * (self.wls[1] - self.wls[0]))
         self.edge_supp = 15 #peak near edge suppresion
 
     def __str__(self):
-        strrep = ', '.join([l+' = '+str(round(v, 4)) for l, v in zip(self.labels, self.params)])  
+        strrep = ', '.join(["{} = {:.4g}".format(l, v) in zip(self.labels, self.params)])
         if self.peak:
-            strrep += ', peak: ' + str(round(100*self.peak[1], 1)) + "% at " + str(round(self.peak[0]))\
-                    + "; " + str(round(self.linewidth, 2)) + " wide"
+            strrep += ", peak at {:.2f}; {:.1%} tall and {:.3g} wide".format(*self.peak, self.linewidth)
         if self.fom:
-            strrep += ', fom: ' + str(round(self.fom, 4))
+            strrep += ', fom: {:.4g}'.format(self.fom)
         return strrep
 
     def __eq__(self, rhs):
-        if self.__class__ != rhs.__class__:
+        if self.__class__ != rhs.__class__ or self.wls != rhs.wls:
             return False
-        if self.wls != rhs.wls:
+        if any([not isclose(l, r) for (l, r) in zip(self.params, rhs.params)]):
             return False
-        for lhsval, rhsval in zip(self.params, rhs.params):
-            if not isclose(lhsval, rhsval):
-                return False
         return True
 
     def _calcfom(self):
@@ -67,14 +65,20 @@ class Grating:
             print("peakedge: " + str(round(peakedge, 3)))
             self.fom = 0
 
+
+    def findpeak(self):
+        self.peak = max(self.trans, key = lambda x: x[1])
+        peakloc = self.trans.index(peak)
+        leftpt = next((pt for pt in self.trans[:peakloc - 1:-1] if pt[1] < self.peak[1]/2), None)
+        rightpt = next((pt for pt in self.trans[peakloc + 1:] if pt[1] < self.peak[1]/2), None)
+        leftloc, rightloc = map(self.trans.index(leftpt), self.trans.index(rightpt)
+
     def mutate(self):
-        child = copy.deepcopy(self)
         childparams = [round(random.gauss(1, 0.1)*p, 4) for p in self.params]
-        child.__init__(childparams, self.wls, self.target)
+        child = self.__class__(childparams, self.wls, self.target)
         return child
 
     def crossbreed(self, rhs):
-        child = copy.deepcopy(self)
-        childparams = [(self.params[i] if random.randint(0,1) else rhs.params[i]) for i in range(len(self.params))]
-        child.__init__(childparams, self.wls, self.target)
+        childparams = [p[random.randint(0, 1)] for p in zip(self.params, rhs.params)]
+        child = self.__class__(childparams, self.wls, self.target)
         return child

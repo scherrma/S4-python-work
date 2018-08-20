@@ -1,0 +1,54 @@
+import S4
+from lib.grating import Grating
+
+import numpy as np
+import scipy.interpolate as interp
+import lib.helpers as h
+
+
+class NIRZCG(Grating):
+    SPEED_OF_LIGHT = 299792458*10**9 #in nm/s
+    si_n = interp.interp1d(*zip(*[[((299792458*10**9)/float(f)),n] for f,n in h.opencsv('../matdat/silicon_n.csv',1)]))
+    si_k = interp.interp1d(*zip(*[[((299792458*10**9)/float(f)),n] for f,n in h.opencsv('../matdat/silicon_k.csv',1)]))
+
+    sio2_n = interp.interp1d(*zip(*[[float(f)*(10**3), n] for f,n in h.opencsv('../matdat/sio2_n.csv',1)]))
+    sio2_k = interp.interp1d(*zip(*[[float(f)*(10**3), n] for f,n in h.opencsv('../matdat/sio2_k.csv',1)]))
+
+    def __init__(self, params, wavelengths, target = None):
+        Grating.__init__(self, params, wavelengths, target)
+        self.d, self.ff, self.tline, self.tslab, self.tstep = params
+        self.labels = ['d','ff','tline','tslab','tstep']
+        self.edge_supp = 5
+    
+    def evaluate(self):
+        if self.fom is None:
+            S = S4.New(self.d, 20)
+        
+            #materials
+            S.AddMaterial("Vacuum", 1)
+            S.AddMaterial("Silicon", 1) #edited later per wavelength
+            S.AddMaterial("Oxide", 1)
+
+            #layers
+            S.AddLayer('top',0,"Vacuum")
+            S.AddLayer('step',self.tstep,"Vacuum")
+            S.AddLayer('lines',self.tline - self.tstep,"Vacuum")
+            S.AddLayer('slab',self.tslab,"Silicon")
+            S.AddLayer('bottom', 0, "Oxide")
+
+            #patterning
+            S.SetRegionRectangle('step','Silicon',(-self.d*self.ff/4,0),0,(self.d*self.ff/4,0))
+            S.SetRegionRectangle('lines','Silicon',(0,0),0,(self.d*self.ff/2,0))
+
+            #light
+            S.SetExcitationPlanewave((0,0),0,1)
+
+            self.trans = []
+            for wl in np.linspace(*self.wls):
+                S.SetFrequency(1/wl)
+                S.SetMaterial('Silicon',complex(NIRZCG.si_n(wl), NIRZCG.si_k(wl))**2)
+                S.SetMaterial('Oxide',complex(NIRZCG.sio2_n(wl), NIRZCG.sio2_k(wl))**2)
+                self.trans.append((wl, float(np.real(S.GetPowerFlux('bottom')[0]))))
+            self._calcfom()
+        
+        return self.fom
