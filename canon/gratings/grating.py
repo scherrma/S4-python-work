@@ -1,24 +1,22 @@
-import copy
+import warnings
+warnings.filterwarnings("ignore", message="numpy.dtype size changed")
+warnings.filterwarnings("ignore", message="numpy.ufunc size changed")
+
 from math import exp, isclose
-import random
+from random import gauss, randint
 
 class Grating:
-
     def __init__(self, params, wavelengths, target = None):
         self.params, self.wls = list(params), wavelengths
-        self.labels, self.fom, self.trans, self.peak = 4*(None,)
-        if target is not None:
-            self.target = target
-        else:
-            self.target = ((self.wls[0] + self.wls[1]) / 2, 0.01 * (self.wls[1] - self.wls[0]))
-        self.edge_supp = 15 #peak near edge suppresion
+        self.labels, self.fom, self.trans, self.peak = 4 * (None,)
+        self.target = target if target else (self.wls[0] + self.wls[1])/2
 
     def __str__(self):
-        strrep = ', '.join(["{} = {:.4g}".format(l, v) in zip(self.labels, self.params)])
+        strrep = ', '.join(["{} = {:.4g}".format(*i) for i in zip(self.labels, self.params)])
         if self.peak:
-            strrep += ", peak at {:.2f}; {:.1%} tall and {:.3g} wide".format(*self.peak, self.linewidth)
+            strrep += ", peak at {:.3f}; {:.1%} tall and {:.3g} wide".format(*self.peak, self.linewidth)
         if self.fom:
-            strrep += ', fom: {:.4g}'.format(self.fom)
+            strrep += ', fom: {:.3f}'.format(self.fom)
         return strrep
 
     def __eq__(self, rhs):
@@ -28,57 +26,36 @@ class Grating:
             return False
         return True
 
-    def _calcfom(self):
-        self.peak = None
-        invrms = lambda x: (sum([a**2 for a in x])/len(x))**(-1/2)
-
-        peak = max(self.trans, key=lambda x:x[1])
-        leftloc = rightloc = peakloc = self.trans.index(peak)
-        while self.trans[leftloc][1] > peak[1]/2 and leftloc > 0:
-            leftloc -= 1
-        leftwl = self.trans[leftloc][0] + (self.trans[leftloc+1][0]-self.trans[leftloc][0])\
-                *(peak[1]/2-self.trans[leftloc][1])/(self.trans[leftloc+1][1]-self.trans[leftloc][1])
-        while self.trans[rightloc][1] > peak[1]/2 and rightloc < len(self.trans)-1:
-            rightloc += 1
-        rightwl = self.trans[rightloc][0] + (self.trans[rightloc][0]-self.trans[rightloc-1][0])\
-                *(self.trans[rightloc][1]-peak[1]/2)/(self.trans[rightloc][1]-self.trans[rightloc-1][1])
-        
-        if leftloc > 0 and rightloc < len(self.trans) and (rightwl - leftwl)/(self.wls[1] - self.wls[0]) < 1/3:
-            bg = [t for wl, t in self.trans[:leftloc]] + [t for wl, t in self.trans[rightloc:]]
-            self.fom = invrms(bg)
-            if self.fom > 20:
-                self.peak = peak
-                self.linewidth = rightwl - leftwl
-                if self.target:
-                    peakedge = exp(-self.edge_supp*abs(peak[0]-self.target)/(self.wls[1]-self.wls[0]))
-                else:
-                    peakedge = 1 - exp(-self.edge_supp*(peak[0]-self.wls[0])/(self.wls[1]-self.wls[0])) \
-                            - exp(-self.edge_supp*(self.wls[1]-peak[0])/(self.wls[1]-self.wls[0]))
-                self.fom *= peakedge*(peak[1]**2)*(self.wls[1] - self.wls[0])/(rightwl-leftwl)
-        else:
-            self.fom = invrms([t for wl, t in self.trans])
-
-        #debug
-        if self.fom < 0:
-            print("target:", self.target)
-            print("negative fom: "+str(self))
-            print("peakedge: " + str(round(peakedge, 3)))
-            self.fom = 0
-
-
     def findpeak(self):
         self.peak = max(self.trans, key = lambda x: x[1])
-        peakloc = self.trans.index(peak)
-        leftpt = next((pt for pt in self.trans[:peakloc - 1:-1] if pt[1] < self.peak[1]/2), None)
-        rightpt = next((pt for pt in self.trans[peakloc + 1:] if pt[1] < self.peak[1]/2), None)
-        leftloc, rightloc = map(self.trans.index(leftpt), self.trans.index(rightpt)
+        peakidx = self.trans.index(self.peak)
+        if peakidx == 0 or peakidx == len(self.trans) - 1:
+            self.peak = None
+        else:
+            interp_wl = lambda tr, i, goal: tr[i][0] + (goal - tr[i][1]) \
+                    * (tr[i + 1][0] - tr[i][0]) / (tr[i + 1][1] - tr[i][1])
+
+            leftpt = next((pt for pt in self.trans[peakidx - 1::-1] if pt[1] < self.peak[1]/2), None)
+            leftwl = interp_wl(self.trans, self.trans.index(leftpt), self.peak[1]/2)
+
+            rightpt = next((pt for pt in self.trans[peakidx + 1:] if pt[1] < self.peak[1]/2), None)
+            rightwl = interp_wl(self.trans, self.trans.index(rightpt) - 1, self.peak[1]/2)
+
+            self.linewidth = rightwl - leftwl
+
+    def _calcfom(self):
+        if self.fom is None:
+            self.findpeak()
+            self.fom = self.peak[1]**2 / (sum([t**2 for (wl, t) in self.trans])/len(self.trans))**(1/2)\
+                    * (self.wls[1] - self.wls[0]) / self.linewidth\
+                    * exp(-(10*(self.target - self.peak[0]) / (self.wls[1] - self.wls[0]))**2)
 
     def mutate(self):
-        childparams = [round(random.gauss(1, 0.1)*p, 4) for p in self.params]
+        childparams = [round(gauss(1, 0.1)*p, 4) for p in self.params]
         child = self.__class__(childparams, self.wls, self.target)
         return child
 
     def crossbreed(self, rhs):
-        childparams = [p[random.randint(0, 1)] for p in zip(self.params, rhs.params)]
+        childparams = [p[randint(0, 1)] for p in zip(self.params, rhs.params)]
         child = self.__class__(childparams, self.wls, self.target)
         return child

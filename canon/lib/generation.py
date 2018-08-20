@@ -13,7 +13,7 @@ class Generation:
 
     def evaluate(self, progress_txt = None):
         for i in range(len(self.pop)):
-            self.pop[i]._evaluate()
+            self.pop[i].evaluate()
             if progress_txt is not None:
                 print(progress_txt, " ", i, "/", len(self.pop), sep = '', end = '\r')
         if progress_txt is not None:
@@ -31,7 +31,7 @@ class Generation:
         children.pop = self.pop[:self.elite]
         for i in range(len(self.pop) - self.elite):
             parents = choice(self.pop, 2, False, fitnesses)
-            child = parents[0].crossbreed(parents[1]))
+            child = parents[0].crossbreed(parents[1])
             if random() < self.muta_rate:
                 child = child.mutate()
             children.pop.append(child)
