@@ -3,8 +3,8 @@ from numpy.random import choice
 from random import random
 
 class Generation:
-    def __init__(self, size, seedGrating, mutation_rate = 0.1, elite = 1):
-        self.pop = size*[seed]
+    def __init__(self, size, seed, mutation_rate = 0.1, elite = 1):
+        self.pop = [seed] + [seed.mutate() for i in range(size - 1)]
         self.elite, self.muta_rate = elite, mutation_rate
         self.best = None
 
