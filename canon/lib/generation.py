@@ -13,14 +13,14 @@ class Generation:
 
     def evaluate(self, progress_txt = None):
         for i in range(len(self.pop)):
+            if progress_txt is not None and i >= self.elite:
+                print(progress_txt, " ", i - self.elite, "/", len(self.pop) - self.elite, sep = '', end = '\r')
             self.pop[i].evaluate()
-            if progress_txt is not None:
-                print(progress_txt, " ", i, "/", len(self.pop), sep = '', end = '\r')
-        if progress_txt is not None:
-            print(progress_txt, ' ' * (2*len(str(len(self.pop))) + 1), end = '\r')
 
         self.pop.sort(key = lambda x: x.fom, reverse=True)
         self.best = self.pop[0]
+        if progress_txt is not None:
+            print(progress_txt, ' ' * (2*len(str(len(self.pop) - self.elite)) + 1), end = '\r')
 
     def progeny(self):
         self.evaluate()

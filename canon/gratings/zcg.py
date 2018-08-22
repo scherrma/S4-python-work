@@ -3,12 +3,12 @@ from gratings.grating import Grating
 
 import numpy as np
 import scipy.interpolate as interp
-from scipy.constants import speed_of_light
+from scipy.constants import nu2lambda
 import lib.helpers as h
 
 class ZCG(Grating):
-    si_n = interp.interp1d(*zip(*[[((speed_of_light*10**6)/float(f)),n] for f,n in h.opencsv('materials/silicon_n.csv',1)]))
-    si_k = interp.interp1d(*zip(*[[((speed_of_light*10**6)/float(f)),n] for f,n in h.opencsv('materials/silicon_k.csv',1)]))
+    si_n = interp.interp1d(*zip(*[[nu2lambda(float(f))*10**6, n] for (f, n) in h.opencsv('../matdat/silicon_n.csv',1)]))
+    si_k = interp.interp1d(*zip(*[[nu2lambda(float(f))*10**6,n] for (f, n) in h.opencsv('../matdat/silicon_k.csv',1)]))
 
     def __init__(self, params, wavelengths, target):
         Grating.__init__(self, params, wavelengths, target)
@@ -42,7 +42,7 @@ class ZCG(Grating):
             self.trans = []
             for wl in np.linspace(*self.wls):
                 S.SetFrequency(1/wl)
-                S.SetMaterial('Silicon', complex(ZCG.si_n(wl), ZCG.si_k(wl))**2)
+                S.SetMaterial('Silicon', complex(self.__class__.si_n(wl), self.__class__.si_k(wl))**2)
                 self.trans.append((wl, float(np.real(S.GetPowerFlux('bottom')[0]))))
             self._calcfom()
             self.findpeak()
